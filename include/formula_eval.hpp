@@ -4,11 +4,6 @@
 #include <string>
 #include <vector>
 
-template<typename T>
-struct calculation_result{
-
-};
-
 enum class base_math_operation{
     num,
     add, sub, mul, div,
