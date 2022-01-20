@@ -17,3 +17,12 @@ list(REMOVE_DUPLICATES formula_eval_INCLUDE_DIRS)
 
 add_executable(formula_eval main.cpp ${formula_eval_SOURCES})
 target_include_directories(formula_eval PRIVATE ${formula_eval_INCLUDE_DIRS})
+
+target_compile_definitions(formula_eval PUBLIC BASE_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC ROOT_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC EXP_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC LOG_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC TRIG_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC INVTRIG_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC HTRIG_MATH_OPS=true)
+target_compile_definitions(formula_eval PUBLIC INVHTRIG_MATH_OPS=true)

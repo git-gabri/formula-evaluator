@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 	s.toc();
 	cout << s << " seconds\n";
 
-	if(!expr.valid){
+	if(expr.status == evaluation_status_t::invalid_expression){
 		cout << "WARN: expression is invalid\n";
 	}
 
