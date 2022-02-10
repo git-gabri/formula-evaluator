@@ -35,7 +35,7 @@ expression_t<T> convert_string_to_expression(const string& s){
 
     //Convert the elements in substrings into base mathematical operations
     //Auxiliary variables
-    const regex re_number("^[+-]?[0-9]+(?:[.]?[0-9]+)?(?:[eE][+-]?[0-9]+)?$");
+    const regex re_number(R"foo(^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$)foo");
     const map<string, base_operation> map_str_to_ops {
         {"dup",     base_operation::dup},
         {"pop",     base_operation::pop},

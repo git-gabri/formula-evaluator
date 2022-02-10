@@ -10,13 +10,13 @@
 //Bottom          Top
 //  |              |
 //  V              V
-//[...]  [...] z y x    <- Newly pushed elements end up here
+// btm [.....] z y x    <- Newly pushed elements end up here
 
 //Base mathematical operations that can be performed on the elements of the stack
 enum class base_operation{
     num,        //Push number on the stack
     dup,        //Duplicate x
-    pop,
+    pop,        //Remove x
     swp         //Swap y and x
 #if BASE_MATH_OPS
 ,   add,        //Add y + x
