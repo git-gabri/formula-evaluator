@@ -17,7 +17,12 @@ enum class base_operation{
     num,        //Push number on the stack
     dup,        //Duplicate x
     pop,        //Remove x
+    clr,        //Clears the contents of the stack
     swp         //Swap y and x
+#if VARIABLES
+,   st,         //Stores the top value of the stack in a variable, consuming it
+    ld          //Loads the value from a variable to the stack
+#endif
 #if BASE_MATH_OPS
 ,   add,        //Add y + x
     sub,        //Subtract y - x
@@ -68,59 +73,65 @@ enum class base_operation{
 //first:  number of elements consumed from the stack
 //second: number of elements placed on the stack
 const std::map<base_operation, std::pair<size_t, size_t>> map_op_to_args{
-    {base_operation::num,      std::make_pair(0, 1)},
-    {base_operation::dup,      std::make_pair(1, 2)},
-    {base_operation::pop,      std::make_pair(1, 0)},
-    {base_operation::swp,      std::make_pair(2, 2)}
+    {base_operation::num,       std::make_pair(0, 1)},
+    {base_operation::dup,       std::make_pair(1, 2)},
+    {base_operation::pop,       std::make_pair(1, 0)},
+    {base_operation::clr,       std::make_pair(0 ,0)}, // Special: stack size gets reset to 0
+    {base_operation::swp,       std::make_pair(2, 2)}
+#if VARIABLES
+,   {base_operation::st,        std::make_pair(1, 0)},
+    {base_operation::ld,        std::make_pair(0, 1)}
+#endif
 #if BASE_MATH_OPS
-,   {base_operation::add,      std::make_pair(2, 1)},
-    {base_operation::sub,      std::make_pair(2, 1)},
-    {base_operation::mul,      std::make_pair(2, 1)},
-    {base_operation::div,      std::make_pair(2, 1)}
+,   {base_operation::add,       std::make_pair(2, 1)},
+    {base_operation::sub,       std::make_pair(2, 1)},
+    {base_operation::mul,       std::make_pair(2, 1)},
+    {base_operation::div,       std::make_pair(2, 1)}
 #endif
 #if ROOT_MATH_OPS
-,   {base_operation::root2,    std::make_pair(1, 1)},
-    {base_operation::root3,    std::make_pair(1, 1)},
-    {base_operation::root4,    std::make_pair(1, 1)},
-    {base_operation::root,     std::make_pair(2, 1)}
+,   {base_operation::root2,     std::make_pair(1, 1)},
+    {base_operation::root3,     std::make_pair(1, 1)},
+    {base_operation::root4,     std::make_pair(1, 1)},
+    {base_operation::root,      std::make_pair(2, 1)}
 #endif
 #if EXP_MATH_OPS
-,   {base_operation::exp,      std::make_pair(1, 1)},
-    {base_operation::exp2,     std::make_pair(1, 1)},
-    {base_operation::exp10,    std::make_pair(1, 1)},
-    {base_operation::pow,      std::make_pair(2, 1)}
+,   {base_operation::exp,       std::make_pair(1, 1)},
+    {base_operation::exp2,      std::make_pair(1, 1)},
+    {base_operation::exp10,     std::make_pair(1, 1)},
+    {base_operation::pow,       std::make_pair(2, 1)}
 #endif
 #if LOG_MATH_OPS
-,   {base_operation::ln,       std::make_pair(1, 1)},
-    {base_operation::log2,     std::make_pair(1, 1)},
-    {base_operation::log10,    std::make_pair(1, 1)},
-    {base_operation::log,      std::make_pair(2, 1)}
+,   {base_operation::ln,        std::make_pair(1, 1)},
+    {base_operation::log2,      std::make_pair(1, 1)},
+    {base_operation::log10,     std::make_pair(1, 1)},
+    {base_operation::log,       std::make_pair(2, 1)}
 #endif
 #if TRIG_MATH_OPS
-,   {base_operation::sin,      std::make_pair(1, 1)},
-    {base_operation::cos,      std::make_pair(1, 1)},
-    {base_operation::tan,      std::make_pair(1, 1)}
+,   {base_operation::sin,       std::make_pair(1, 1)},
+    {base_operation::cos,       std::make_pair(1, 1)},
+    {base_operation::tan,       std::make_pair(1, 1)}
 #endif
 #if INVTRIG_MATH_OPS
-,   {base_operation::asin,     std::make_pair(1, 1)},
-    {base_operation::acos,     std::make_pair(1, 1)},
-    {base_operation::atan,     std::make_pair(1, 1)}
+,   {base_operation::asin,      std::make_pair(1, 1)},
+    {base_operation::acos,      std::make_pair(1, 1)},
+    {base_operation::atan,      std::make_pair(1, 1)}
 #endif
 #if HTRIG_MATH_OPS
-,   {base_operation::sinh,     std::make_pair(1, 1)},
-    {base_operation::cosh,     std::make_pair(1, 1)},
-    {base_operation::tanh,     std::make_pair(1, 1)}
+,   {base_operation::sinh,      std::make_pair(1, 1)},
+    {base_operation::cosh,      std::make_pair(1, 1)},
+    {base_operation::tanh,      std::make_pair(1, 1)}
 #endif
 #if INVHTRIG_MATH_OPS
-,   {base_operation::asinh,    std::make_pair(1, 1)},
-    {base_operation::acosh,    std::make_pair(1, 1)},
-    {base_operation::atanh,    std::make_pair(0, 1)}
+,   {base_operation::asinh,     std::make_pair(1, 1)},
+    {base_operation::acosh,     std::make_pair(1, 1)},
+    {base_operation::atanh,     std::make_pair(0, 1)}
 #endif
 };
 
 enum class evaluation_status_t {
     good,
-    stack_leftovers,
+    empty,
+    leftovers,
     invalid_expression,
     missing_parameters,
     other
@@ -131,6 +142,9 @@ struct expression_t{
     evaluation_status_t status{evaluation_status_t::good};
     std::vector<base_operation> ops;
     std::vector<T> constants;
+#if VARIABLES
+    std::vector<size_t> accessed_vars_indexes;
+#endif
 };
 
 template<typename T>

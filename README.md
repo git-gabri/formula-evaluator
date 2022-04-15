@@ -20,12 +20,17 @@ Number constants are verified with this regex:
 ```
 ^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$
 ```
+"Loading variables to the stack" operation is verified with this regex: `^s\d+$`.  
+"Storing variables from the stack" operation is verified with this regex: `^l\d+$`.
 | String command | # consumed | # pushed | Comment |
 | --- | --- | --- | --- |
 | number | 0 | 1 | Pushes number constant on the stack |
 | `dup` | 1 | 2 | Duplicates `x` |
 | `pop` | 1 | 0 | Removes `x` |
+| `clr` | / | / | Clears the contents of the stack |
 | `swp` | 2 | 2 | Swaps `x` and `x` |
+| `s`XYZ | 1 | 0 | Stores `x`, consuming it, in the variable XYZ |
+| `l`XYZ | 0 | 1 | Loads the contents of the variable XYZ on the stack |
 | `+` | 2 | 1 | Performs `y + x` |
 | `-` | 2 | 1 | Performs `y - x` |
 | `*` | 2 | 1 | Performs `y * x` |

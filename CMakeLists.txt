@@ -18,6 +18,7 @@ list(REMOVE_DUPLICATES formula_eval_INCLUDE_DIRS)
 add_executable(formula_eval main.cpp ${formula_eval_SOURCES})
 target_include_directories(formula_eval PRIVATE ${formula_eval_INCLUDE_DIRS})
 
+target_compile_definitions(formula_eval PUBLIC VARIABLES=true)
 target_compile_definitions(formula_eval PUBLIC BASE_MATH_OPS=true)
 target_compile_definitions(formula_eval PUBLIC ROOT_MATH_OPS=true)
 target_compile_definitions(formula_eval PUBLIC EXP_MATH_OPS=true)

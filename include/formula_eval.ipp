@@ -3,6 +3,7 @@
 #include <regex>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 using namespace std;
 
@@ -36,9 +37,14 @@ expression_t<T> convert_string_to_expression(const string& s){
     //Convert the elements in substrings into base mathematical operations
     //Auxiliary variables
     const regex re_number(R"foo(^[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$)foo");
+#if VARIABLES
+    const regex re_var_store(R"foo(^s\d+$)foo");
+    const regex re_var_load (R"foo(^l\d+$)foo");
+#endif
     const map<string, base_operation> map_str_to_ops {
         {"dup",     base_operation::dup},
         {"pop",     base_operation::pop},
+        {"clr",     base_operation::clr},
         {"swp",     base_operation::swp}
 #if BASE_MATH_OPS
     ,   {"+",       base_operation::add},
@@ -96,58 +102,21 @@ expression_t<T> convert_string_to_expression(const string& s){
             ret_expr.ops.push_back(base_operation::num);
             ret_expr.constants.push_back(static_cast<T>(stold(*it)));
         }
+#if VARIABLES
+        else if(regex_match(*it, re_var_store)){
+            ret_expr.ops.push_back(base_operation::st);
+            ret_expr.accessed_vars_indexes.push_back(static_cast<T>(stoull((*it).substr(1))));
+        }
+        else if(regex_match(*it, re_var_load)){
+            ret_expr.ops.push_back(base_operation::ld);
+            ret_expr.accessed_vars_indexes.push_back(static_cast<T>(stoull((*it).substr(1))));
+        }
+#endif
         else{
             ret_expr.status = evaluation_status_t::invalid_expression;
             break;
         }
     }
-
-    //DEBUG
-    /*
-    if(ret_expr.valid == false)
-        cout << "Invalid expression" << endl;
-    const map<base_operation, string> map_ops_to_str {
-        {base_operation::num, "NUMBER"},
-        {base_operation::dup, "dup"},
-        {base_operation::pop, "pop"},
-        {base_operation::swp, "swap"},
-        {base_operation::add, "+"},
-        {base_operation::sub, "-"},
-        {base_operation::mul, "*"},
-        {base_operation::div, "/"},
-        {base_operation::root2, "root2"},
-        {base_operation::root3, "root3"},
-        {base_operation::root4, "root4"},
-        {base_operation::root, "root"},
-        {base_operation::exp, "exp"},
-        {base_operation::exp2, "exp2"},
-        {base_operation::exp10, "exp10"},
-        {base_operation::pow, "pow"},
-        {base_operation::ln, "ln"},
-        {base_operation::log2, "log2"},
-        {base_operation::log10, "log10"},
-        {base_operation::log, "log"},
-        {base_operation::sin, "sin"},
-        {base_operation::cos, "cos"},
-        {base_operation::tan, "tan"},
-        {base_operation::asin, "asin"},
-        {base_operation::acos, "acos"},
-        {base_operation::atan, "atan"},
-        {base_operation::sinh, "sinh"},
-        {base_operation::cosh, "cosh"},
-        {base_operation::tanh, "tanh"},
-        {base_operation::asinh, "asinh"},
-        {base_operation::acosh, "acosh"},
-        {base_operation::atanh, "atanh"}
-    };
-    for(auto it = ret_expr.ops.begin(); it != ret_expr.ops.end(); ++it){
-        cout << map_ops_to_str.at(*it) << endl;
-    }
-    cout << "Numbers:" << endl;
-    for(auto it = ret_expr.constants.begin(); it != ret_expr.constants.end(); ++it){
-        cout << *it << endl;
-    }
-    */
 
     if(ret_expr.status != evaluation_status_t::invalid_expression)
         ret_expr.status = check_expression(ret_expr);
@@ -160,6 +129,11 @@ evaluation_status_t check_expression(const expression_t<T>& expr){
     size_t stack_size = 0;
 
     for(auto it = expr.ops.begin(); it != expr.ops.end(); ++it){
+        if(*it == base_operation::clr){
+            stack_size = 0;
+            continue;
+        }
+
         if(stack_size < map_op_to_args.at(*it).first)
             return evaluation_status_t::missing_parameters;
 
@@ -167,10 +141,12 @@ evaluation_status_t check_expression(const expression_t<T>& expr){
         stack_size += map_op_to_args.at(*it).second;
     }
 
-    if(stack_size > 1)
-        return evaluation_status_t::stack_leftovers;
-    else
+    if(stack_size == 0)
+        return evaluation_status_t::empty;
+    else if(stack_size == 1)
         return evaluation_status_t::good;
+    else
+        return evaluation_status_t::leftovers;
 }
 
 template<typename T>
@@ -190,9 +166,15 @@ evaluation_result_t<T> eval_expression(const expression_t<T>& expr){
 
     //Stack into which all the calculations happen
     stack<T> calc_stack;
-
     //This is the index of the next constant to be loaded in the stack whenever the "num" op is found
     size_t constant_index = 0;
+
+#if VARIABLES
+    //Map into which all variables are stored
+    map<size_t, T> var_map{};
+    //This is the index of the next variable to be accessed, either in store or load, whenever the "sXYZ / lXYZ" ops are found
+    size_t var_index = 0;
+#endif
 
     //Iterating through all the operations to perform
     for(auto it = expr.ops.begin(); it != expr.ops.end(); ++it){
@@ -211,6 +193,10 @@ evaluation_result_t<T> eval_expression(const expression_t<T>& expr){
                 calc_stack.pop();
                 break;
 
+            case base_operation::clr:
+                calc_stack = stack<T>{};
+                break;
+
             case base_operation::swp:
             {   const T x = calc_stack.top();
                 calc_stack.pop();
@@ -220,6 +206,20 @@ evaluation_result_t<T> eval_expression(const expression_t<T>& expr){
                 calc_stack.push(x);
                 calc_stack.push(y);
             }   break;
+#if VARIABLES
+            case base_operation::st:
+            {   const T x = calc_stack.top();
+                calc_stack.pop();
+
+                var_map[expr.accessed_vars_indexes[var_index]] = x;
+                ++var_index;
+            }   break;
+
+            case base_operation::ld:
+                calc_stack.push(var_map[expr.accessed_vars_indexes[var_index]]);
+                ++var_index;
+                break;
+#endif
 #if BASE_MATH_OPS
             case base_operation::add:
             {   const T x = calc_stack.top();
@@ -442,16 +442,11 @@ evaluation_result_t<T> eval_expression(const expression_t<T>& expr){
         }
     }
 
-    /*
-    if(calc_stack.size() == 1)
-        result.status = evaluation_status_t::good;
-    else
-        result.status = evaluation_status_t::stack_leftovers;
-    */
-
     result.status = expr.status;
-
-    result.value = calc_stack.top();
+    if(expr.status == evaluation_status_t::empty)
+        result.value = 0;
+    else
+        result.value = calc_stack.top();
 
     return result;
 }

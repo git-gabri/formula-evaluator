@@ -5,16 +5,25 @@
 using namespace std;
 
 int main(int argc, char **argv){
+	if(argc < 2){
+		cerr << "ERR: not enough arguments specified\n";
+		return EXIT_FAILURE;
+	}
+
+	//Test string
+	//const string expr_str("2 2 + s0 clr l0");
 	stopwatch s;
 	cout << "Converting string to expression: ";
 
 	s.tic();
 	auto expr = convert_string_to_expression<double>(argv[1]);
+	//auto expr = convert_string_to_expression<double>(expr_str);
 	s.toc();
-	cout << s << " seconds\n";
+	cout << s << " seconds" << endl;
 
 	if(expr.status == evaluation_status_t::invalid_expression){
-		cout << "WARN: expression is invalid\n";
+		cerr << "ERR: expression is invalid\n";
+		return EXIT_FAILURE;
 	}
 
 	cout << "Evaluating expression: ";
@@ -29,7 +38,11 @@ int main(int argc, char **argv){
 			cout << "good";
 			break;
 
-		case evaluation_status_t::stack_leftovers:
+		case evaluation_status_t::empty:
+			cout << "good, but stack was empty at the end of the computation";
+			break;
+
+		case evaluation_status_t::leftovers:
 			cout << "good, but there were leftovers on the stack";
 			break;
 
@@ -48,5 +61,5 @@ int main(int argc, char **argv){
 	cout << "\n";
 	cout << "Final value: " << res.value << "\n";
 
-	return 0;
+	return EXIT_SUCCESS;
 }
